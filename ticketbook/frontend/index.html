@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TicketBook — Бронирование билетов</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232635;
+      --border: #2e3248;
+      --accent: #6c63ff;
+      --accent-hover: #5a52e0;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* NAV */
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+    .nav-brand { font-size: 1.3rem; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 6px; align-items: center; }
+    .nav-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 7px 14px; border-radius: 7px; font-size: 0.9rem; transition: all 0.15s; }
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.active { background: var(--accent); color: #fff; }
+    #nav-user { font-size: 0.85rem; color: var(--muted); margin-right: 8px; }
+
+    /* LAYOUT */
+    .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* CARDS */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+    .card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 18px; color: var(--text); }
+
+    /* FORMS */
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+    input, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 10px 13px; color: var(--text); font-size: 0.9rem; outline: none; transition: border 0.15s; }
+    input:focus, select:focus { border-color: var(--accent); }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--surface2); }
+    .btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ALERTS */
+    .alert { padding: 11px 15px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 14px; }
+    .alert-success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .alert-info { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+
+    /* BADGE */
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pending { background: rgba(245,158,11,0.2); color: #fcd34d; }
+    .badge-paid { background: rgba(34,197,94,0.2); color: #86efac; }
+    .badge-failed { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .badge-cancelled { background: rgba(148,163,184,0.2); color: #94a3b8; }
+    .badge-concert { background: rgba(168,85,247,0.2); color: #c4b5fd; }
+    .badge-theater { background: rgba(59,130,246,0.2); color: #93c5fd; }
+    .badge-cinema { background: rgba(236,72,153,0.2); color: #f9a8d4; }
+
+    /* EVENT GRID */
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .event-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: border-color 0.15s; }
+    .event-card:hover { border-color: var(--accent); }
+    .event-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .event-meta { font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; }
+    .event-price { font-size: 1.1rem; font-weight: 700; color: var(--accent); margin: 12px 0 14px; }
+    .event-seats { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 10px 14px; font-weight: 600; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* FILTERS */
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: flex-end; }
+    .filters .form-group { margin-bottom: 0; flex: 1; min-width: 140px; }
+
+    /* TOKEN BOX */
+    .token-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; font-family: monospace; font-size: 0.78rem; color: var(--muted); word-break: break-all; margin-top: 8px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+    .tab-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 9px 16px; font-size: 0.88rem; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* SPINNER */
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* GRID 2 */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } .filters { flex-direction: column; } }
+
+    /* HERO */
+    .hero { text-align: center; padding: 48px 20px 32px; }
+    .hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: var(--muted); font-size: 1.05rem; }
+
+    /* RESPONSE VIEWER */
+    .response-block { margin-top: 14px; }
+    .response-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 14px; font-size: 0.78rem; overflow-x: auto; color: #a5f3fc; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+
+    .section-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .section-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">🎟 TicketBook</div>
+  <div style="display:flex;align-items:center">
+    <span id="nav-user"></span>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="showPage('catalog')">Каталог</button>
+      <button class="nav-btn" onclick="showPage('bookings')" id="nav-bookings">Мои брони</button>
+      <button class="nav-btn" onclick="showPage('admin')" id="nav-admin" style="display:none">Админ</button>
+      <button class="nav-btn" onclick="showPage('auth')" id="nav-auth">Войти</button>
+      <button class="nav-btn btn-primary" onclick="logout()" id="nav-logout" style="display:none">Выйти</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== AUTH PAGE ===== -->
+<div id="page-auth" class="page container">
+  <div style="max-width:420px;margin:40px auto">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchAuthTab('login')">Войти</button>
+      <button class="tab-btn" onclick="switchAuthTab('register')">Регистрация</button>
+    </div>
+
+    <div id="auth-login" class="tab-panel active">
+      <div class="card">
+        <h2>Вход в систему</h2>
+        <div id="login-alert"></div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" value="user@test.com" placeholder="user@test.com">
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="login-pass" value="Test1234!" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Войти</button>
+        <div style="margin-top:12px;font-size:0.8rem;color:var(--muted)">
+          Тестовый пользователь: <code>user@test.com</code> / <code>Test1234!</code><br>
+          Администратор: <code>admin@test.com</code> / <code>Admin1234!</code>
+        </div>
+      </div>
+    </div>
+
+    <div id="auth-register" class="tab-panel">
+      <div class="card">
+        <h2>Регистрация</h2>
+        <div id="register-alert"></div>
+        <div class="form-group">
+          <label>Имя</label>
+          <input type="text" id="reg-name" placeholder="Иван Иванов">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="ivan@example.com">
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="reg-pass" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="doRegister()">Зарегистрироваться</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CATALOG PAGE ===== -->
+<div id="page-catalog" class="page active container">
+  <div class="hero">
+    <h1>TicketBook</h1>
+    <p>Бронирование билетов на концерты, театры и кино</p>
+  </div>
+
+  <div class="filters card">
+    <div class="filters">
+      <div class="form-group">
+        <label>Категория</label>
+        <select id="filter-cat" onchange="loadEvents()">
+          <option value="">Все</option>
+          <option value="concert">Концерты</option>
+          <option value="theater">Театр</option>
+          <option value="cinema">Кино</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>С даты</label>
+        <input type="date" id="filter-from" onchange="loadEvents()">
+      </div>
+      <div class="form-group">
+        <label>По дату</label>
+        <input type="date" id="filter-to" onchange="loadEvents()">
+      </div>
+      <div>
+        <button class="btn btn-outline" onclick="clearFilters()">Сбросить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="events-container">
+    <div class="empty"><div class="spinner"></div> Загрузка...</div>
+  </div>
+</div>
+
+<!-- ===== BOOKINGS PAGE ===== -->
+<div id="page-bookings" class="page container">
+  <div class="section-title">Мои бронирования</div>
+  <div class="section-sub">Управляйте своими билетами</div>
+
+  <div id="bookings-alert"></div>
+
+  <!-- Pay modal inline -->
+  <div id="pay-section" class="card" style="display:none">
+    <h2>💳 Оплата бронирования #<span id="pay-booking-id"></span></h2>
+    <div id="pay-alert"></div>
+    <div class="form-group">
+      <label>Токен карты</label>
+      <select id="pay-card">
+        <option value="tok_test_valid">tok_test_valid — успешная оплата</option>
+        <option value="tok_test_decline">tok_test_decline — отказ</option>
+        <option value="tok_invalid_123">tok_invalid_123 — произвольный (отказ)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-success" onclick="confirmPay()">Оплатить</button>
+      <button class="btn btn-outline" onclick="document.getElementById('pay-section').style.display='none'">Отмена</button>
+    </div>
+  </div>
+
+  <div id="bookings-container">
+    <div class="empty"><span style="color:var(--muted)">Войдите, чтобы увидеть бронирования</span></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PAGE ===== -->
+<div id="page-admin" class="page container">
+  <div class="section-title">Панель администратора</div>
+  <div class="section-sub">Управление мероприятиями и бронированиями</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchAdminTab('events')">Мероприятия</button>
+    <button class="tab-btn" onclick="switchAdminTab('bookings')">Все брони</button>
+    <button class="tab-btn" onclick="switchAdminTab('api')">API Тестер</button>
+  </div>
+
+  <!-- Admin Events -->
+  <div id="admin-events" class="tab-panel active">
+    <div class="card">
+      <h2>Добавить мероприятие</h2>
+      <div id="admin-event-alert"></div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Название</label>
+          <input type="text" id="ae-title" placeholder="Название">
+        </div>
+        <div class="form-group">
+          <label>Категория</label>
+          <select id="ae-cat">
+            <option value="concert">Концерт</option>
+            <option value="theater">Театр</option>
+            <option value="cinema">Кино</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Дата и время</label>
+          <input type="datetime-local" id="ae-date">
+        </div>
+        <div class="form-group">
+          <label>Место проведения</label>
+          <input type="text" id="ae-venue" placeholder="Адрес / Площадка">
+        </div>
+        <div class="form-group">
+          <label>Цена (₽)</label>
+          <input type="number" id="ae-price" placeholder="1000">
+        </div>
+        <div class="form-group">
+          <label>Мест всего</label>
+          <input type="number" id="ae-seats" placeholder="100">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <input type="text" id="ae-desc" placeholder="Краткое описание">
+      </div>
+      <button class="btn btn-primary" onclick="adminCreateEvent()">Создать мероприятие</button>
+    </div>
+    <div id="admin-events-list"></div>
+  </div>
+
+  <!-- Admin All Bookings -->
+  <div id="admin-bookings" class="tab-panel">
+    <div class="card">
+      <h2>Все бронирования</h2>
+      <div id="admin-bookings-list"><div class="empty"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- API Tester -->
+  <div id="admin-api" class="tab-panel">
+    <div class="card">
+      <h2>🔬 API Тестер (по тест-кейсам)</h2>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px">Выполняйте запросы к API напрямую для проверки интеграционных тест-кейсов</p>
+
+      <div class="form-group">
+        <label>Тест-кейс</label>
+        <select id="api-preset" onchange="loadPreset()">
+          <option value="">— Выбрать пресет —</option>
+          <option value="tc01">TC-INT-01: Авторизация → Бронирование (успех)</option>
+          <option value="tc02">TC-INT-02: Невалидный токен</option>
+          <option value="tc03">TC-INT-03: Несуществующий event_id</option>
+          <option value="tc04">TC-INT-04: Успешная оплата</option>
+          <option value="tc05">TC-INT-05: Двойная оплата</option>
+          <option value="tc06">TC-INT-06: Отказ оплаты</option>
+        </select>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>Метод</label>
+          <select id="api-method">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>URL</label>
+          <input type="text" id="api-url" placeholder="/api/...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Authorization Header (Bearer token)</label>
+        <input type="text" id="api-token" placeholder="Вставьте session_token или оставьте пустым">
+      </div>
+
+      <div class="form-group">
+        <label>Request Body (JSON)</label>
+        <textarea id="api-body" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;color:var(--text);font-family:monospace;font-size:0.82rem;resize:vertical;min-height:80px;outline:none" placeholder='{"key": "value"}'></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="runApiTest()">▶ Выполнить запрос</button>
+
+      <div id="api-result" class="response-block" style="display:none">
+        <div class="response-label">Ответ</div>
+        <pre id="api-result-pre"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '';  // same origin via nginx proxy
+  let token = localStorage.getItem('tb_token') || '';
+  let currentUser = JSON.parse(localStorage.getItem('tb_user') || 'null');
+  let payTarget = null;
+
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+
+  function apiHeaders(withBody = false) {
+    const h = {};
+    if (withBody) h['Content-Type'] = 'application/json';
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+  }
+
+  async function apiFetch(method, path, body) {
+    const opts = { method, headers: apiHeaders(!!body) };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    const data = await r.json().catch(() => ({}));
+    return { status: r.status, data };
+  }
+
+  function alert_(containerId, msg, type = 'error') {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = msg ? `<div class="alert alert-${type}">${msg}</div>` : '';
+  }
+
+  function badge(status) {
+    return `<span class="badge badge-${status}">${status}</span>`;
+  }
+
+  function catBadge(cat) {
+    const labels = { concert: 'Концерт', theater: 'Театр', cinema: 'Кино' };
+    return `<span class="badge badge-${cat}">${labels[cat] || cat}</span>`;
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleString('ru-RU', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function fmtPrice(p) {
+    return p.toLocaleString('ru-RU') + ' ₽';
+  }
+
+  // ── NAVIGATION ─────────────────────────────────────────────────────────────
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+
+    if (name === 'catalog') loadEvents();
+    if (name === 'bookings') loadMyBookings();
+    if (name === 'admin') { loadAdminEvents(); loadAdminBookings(); }
+
+    // highlight nav
+    const map = { catalog: 0, bookings: 1, admin: 2, auth: 3 };
+  }
+
+  function updateNav() {
+    const isAuth = !!token;
+    const isAdmin = currentUser?.role === 'admin';
+
+    document.getElementById('nav-user').textContent = currentUser ? `👤 ${currentUser.name}` : '';
+    document.getElementById('nav-auth').style.display = isAuth ? 'none' : '';
+    document.getElementById('nav-logout').style.display = isAuth ? '' : 'none';
+    document.getElementById('nav-bookings').style.display = isAuth ? '' : 'none';
+    document.getElementById('nav-admin').style.display = isAdmin ? '' : 'none';
+  }
+
+  // ── AUTH ───────────────────────────────────────────────────────────────────
+
+  function switchAuthTab(tab) {
+    document.querySelectorAll('#page-auth .tab-btn').forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register')));
+    document.getElementById('auth-login').classList.toggle('active', tab === 'login');
+    document.getElementById('auth-register').classList.toggle('active', tab === 'register');
+  }
+
+  async function doLogin() {
+    alert_('login-alert', '');
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const { status, data } = await apiFetch('POST', '/api/auth/login', { email, password: pass });
+    if (status === 200) {
+      token = data.session_token;
+      currentUser = data.user;
+      localStorage.setItem('tb_token', token);
+      localStorage.setItem('tb_user', JSON.stringify(currentUser));
+      updateNav();
+      showPage('catalog');
+    } else {
+      alert_('login-alert', data.error || 'Ошибка входа');
+    }
+  }
+
+  async function doRegister() {
+    alert_('register-alert', '');
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-pass').value;
+    const { status, data } = await apiFetch('POST', '/api/auth/register', { name, email, password: pass });
+    if (status === 201) {
+      token = data.session_token;
+      currentUser = data.user;
+      localStorage.setItem('tb_token', token);
+      localStorage.setItem('tb_user', JSON.stringify(currentUser));
+      updateNav();
+      showPage('catalog');
+    } else {
+      alert_('register-alert', data.error || 'Ошибка регистрации');
+    }
+  }
+
+  function logout() {
+    token = ''; currentUser = null;
+    localStorage.removeItem('tb_token');
+    localStorage.removeItem('tb_user');
+    updateNav();
+    showPage('catalog');
+  }
+
+  // ── CATALOG ────────────────────────────────────────────────────────────────
+
+  async function loadEvents() {
+    const cat = document.getElementById('filter-cat').value;
+    const from = document.getElementById('filter-from').value;
+    const to = document.getElementById('filter-to').value;
+
+    let url = '/api/catalog/events?';
+    if (cat) url += `category=${cat}&`;
+    if (from) url += `date_from=${from}T00:00:00&`;
+    if (to) url += `date_to=${to}T23:59:59&`;
+
+    const { status, data } = await apiFetch('GET', url);
+    const container = document.getElementById('events-container');
+
+    if (status !== 200) {
+      container.innerHTML = `<div class="empty">Ошибка загрузки</div>`;
+      return;
+    }
+
+    if (!data.events || data.events.length === 0) {
+      container.innerHTML = `<div class="empty"><div class="empty-icon">🎭</div>Мероприятий не найдено</div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="events-grid">${data.events.map(e => `
+      <div class="event-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>${catBadge(e.category)}</div>
+          <span style="font-size:0.75rem;color:var(--muted)">#${e.id}</span>
+        </div>
+        <h3>${e.title}</h3>
+        <div class="event-meta">📍 ${e.venue}</div>
+        <div class="event-meta">📅 ${fmtDate(e.date)}</div>
+        ${e.description ? `<div class="event-meta" style="margin-top:6px">${e.description}</div>` : ''}
+        <div class="event-price">${fmtPrice(e.price)}</div>
+        <div class="event-seats">Мест: ${e.seats_available} / ${e.seats_total}</div>
+        ${token
+          ? `<button class="btn btn-primary" style="width:100%" onclick="bookEvent(${e.id})" ${e.seats_available === 0 ? 'disabled' : ''}>
+              ${e.seats_available === 0 ? 'Нет мест' : 'Забронировать'}
+            </button>`
+          : `<button class="btn btn-outline" style="width:100%" onclick="showPage('auth')">Войдите для брони</button>`
+        }
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function clearFilters() {
+    document.getElementById('filter-cat').value = '';
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    loadEvents();
+  }
+
+  async function bookEvent(eventId) {
+    if (!token) { showPage('auth'); return; }
+    const { status, data } = await apiFetch('POST', '/api/booking/create', { event_id: eventId });
+    if (status === 200) {
+      showAlert(`✅ Бронирование создано! ID: ${data.booking_id}. Статус: pending`, 'success');
+      loadEvents();
+    } else {
+      showAlert(`❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+    }
+  }
+
+  function showAlert(msg, type) {
+    const div = document.createElement('div');
+    div.className = `alert alert-${type}`;
+    div.style.cssText = 'position:fixed;top:72px;right:20px;max-width:380px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4)';
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  // ── BOOKINGS ───────────────────────────────────────────────────────────────
+
+  async function loadMyBookings() {
+    if (!token) {
+      document.getElementById('bookings-container').innerHTML = `<div class="empty"><span style="color:var(--muted)">Войдите, чтобы увидеть бронирования</span></div>`;
+      return;
+    }
+    const { status, data } = await apiFetch('GET', '/api/booking/my');
+    const c = document.getElementById('bookings-container');
+
+    if (status !== 200) { c.innerHTML = `<div class="empty">Ошибка загрузки</div>`; return; }
+    if (!data.bookings || data.bookings.length === 0) {
+      c.innerHTML = `<div class="empty"><div class="empty-icon">🎟</div>Нет бронирований</div>`;
+      return;
+    }
+
+    c.innerHTML = `<div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Мероприятие</th><th>Дата</th><th>Цена</th><th>Статус</th><th>Действия</th></tr></thead>
+      <tbody>${data.bookings.map(b => `
+        <tr>
+          <td><code>${b.id}</code></td>
+          <td>${b.event?.title || '—'}</td>
+          <td>${fmtDate(b.created_at)}</td>
+          <td>${b.event ? fmtPrice(b.event.price) : '—'}</td>
+          <td>${badge(b.status)}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap">
+            ${b.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="openPay(${b.id})">Оплатить</button>` : ''}
+            ${b.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="cancelBooking(${b.id})">Отменить</button>` : ''}
+          </td>
+        </tr>
+      `).join('')}
+      </tbody>
+    </table></div></div>`;
+  }
+
+  function openPay(bookingId) {
+    payTarget = bookingId;
+    document.getElementById('pay-booking-id').textContent = bookingId;
+    document.getElementById('pay-section').style.display = 'block';
+    alert_('pay-alert', '');
+    document.getElementById('pay-section').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function confirmPay() {
+    const card_token = document.getElementById('pay-card').value;
+    const { status, data } = await apiFetch('POST', '/api/payment/pay', { booking_id: payTarget, card_token });
+    if (status === 200) {
+      alert_('pay-alert', `✅ Оплата прошла успешно! Статус брони: ${data.booking_status}`, 'success');
+      loadMyBookings();
+    } else if (status === 402) {
+      alert_('pay-alert', `❌ Оплата отклонена. Статус брони: ${data.booking_status}`, 'error');
+      loadMyBookings();
+    } else {
+      alert_('pay-alert', data.error || 'Ошибка оплаты', 'error');
+    }
+  }
+
+  async function cancelBooking(bookingId) {
+    const { status, data } = await apiFetch('POST', `/api/booking/${bookingId}/cancel`);
+    if (status === 200) {
+      showAlert('Бронирование отменено', 'success');
+      loadMyBookings();
+    } else {
+      showAlert(data.error || 'Ошибка', 'error');
+    }
+  }
+
+  // ── ADMIN ──────────────────────────────────────────────────────────────────
+
+  function switchAdminTab(tab) {
+    document.querySelectorAll('#page-admin .tab-btn').forEach((b, i) => {
+      const tabs = ['events', 'bookings', 'api'];
+      b.classList.toggle('active', tabs[i] === tab);
+    });
+    document.querySelectorAll('#page-admin .tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('admin-' + tab).classList.add('active');
+    if (tab === 'bookings') loadAdminBookings();
+    if (tab === 'events') loadAdminEvents();
+  }
+
+  async function adminCreateEvent() {
+    alert_('admin-event-alert', '');
+    const body = {
+      title: document.getElementById('ae-title').value.trim(),
+      category: document.getElementById('ae-cat').value,
+      date: document.getElementById('ae-date').value,
+      venue: document.getElementById('ae-venue').value.trim(),
+      price: parseFloat(document.getElementById('ae-price').value),
+      seats_total: parseInt(document.getElementById('ae-seats').value),
+      description: document.getElementById('ae-desc').value.trim(),
+    };
+    const { status, data } = await apiFetch('POST', '/api/catalog/events', body);
+    if (status === 201) {
+      alert_('admin-event-alert', `✅ Мероприятие "${data.event.title}" создано (ID: ${data.event.id})`, 'success');
+      loadAdminEvents();
+      loadEvents();
+    } else {
+      alert_('admin-event-alert', data.error || 'Ошибка создания');
+    }
+  }
+
+  async function loadAdminEvents() {
+    const { status, data } = await apiFetch('GET', '/api/catalog/events');
+    const c = document.getElementById('admin-events-list');
+    if (status !== 200 || !data.events) return;
+    c.innerHTML = `<div class="card"><h2>Все мероприятия (${data.total})</h2><div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Дата</th><th>Цена</th><th>Мест</th><th></th></tr></thead>
+      <tbody>${data.events.map(e => `
+        <tr>
+          <td><code>${e.id}</code></td>
+          <td>${e.title}</td>
+          <td>${catBadge(e.category)}</td>
+          <td>${fmtDate(e.date)}</td>
+          <td>${fmtPrice(e.price)}</td>
+          <td>${e.seats_available}/${e.seats_total}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="adminDeleteEvent(${e.id})">Удалить</button></td>
+        </tr>
+      `).join('')}
+      </tbody>
+    </table></div></div>`;
+  }
+
+  async function adminDeleteEvent(id) {
+    if (!confirm(`Удалить мероприятие #${id}?`)) return;
+    const { status, data } = await apiFetch('DELETE', `/api/catalog/events/${id}`);
+    if (status === 200) { loadAdminEvents(); loadEvents(); }
+    else showAlert(data.error || 'Ошибка удаления', 'error');
+  }
+
+  async function loadAdminBookings() {
+    const { status, data } = await apiFetch('GET', '/api/booking/all');
+    const c = document.getElementById('admin-bookings-list');
+    if (status !== 200 || !data.bookings) {
+      c.innerHTML = `<div class="empty">Нет данных или нет доступа</div>`; return;
+    }
+    if (data.bookings.length === 0) {
+      c.innerHTML = `<div class="empty">Нет бронирований</div>`; return;
+    }
+    c.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Пользователь</th><th>Мероприятие</th><th>Статус</th><th>Создано</th></tr></thead>
+      <tbody>${data.bookings.map(b => `
+        <tr>
+          <td><code>${b.id}</code></td>
+          <td>User #${b.user_id}</td>
+          <td>${b.event?.title || `Event #${b.event_id}`}</td>
+          <td>${badge(b.status)}</td>
+          <td>${fmtDate(b.created_at)}</td>
+        </tr>
+      `).join('')}
+      </tbody>
+    </table></div>`;
+  }
+
+  // ── API TESTER ─────────────────────────────────────────────────────────────
+
+  function loadPreset() {
+    const preset = document.getElementById('api-preset').value;
+    const presets = {
+      tc01: { method:'POST', url:'/api/booking/create', token: token, body: JSON.stringify({event_id: 5}, null, 2) },
+      tc02: { method:'POST', url:'/api/booking/create', token: 'INVALID_TOKEN_12345', body: JSON.stringify({event_id: 5}, null, 2) },
+      tc03: { method:'POST', url:'/api/booking/create', token: token, body: JSON.stringify({event_id: 99999}, null, 2) },
+      tc04: { method:'POST', url:'/api/payment/pay', token: token, body: JSON.stringify({booking_id: 1, card_token: 'tok_test_valid'}, null, 2) },
+      tc05: { method:'POST', url:'/api/payment/pay', token: token, body: JSON.stringify({booking_id: 1, card_token: 'tok_test_valid'}, null, 2) },
+      tc06: { method:'POST', url:'/api/payment/pay', token: token, body: JSON.stringify({booking_id: 2, card_token: 'tok_test_decline'}, null, 2) },
+    };
+    const p = presets[preset];
+    if (!p) return;
+    document.getElementById('api-method').value = p.method;
+    document.getElementById('api-url').value = p.url;
+    document.getElementById('api-token').value = p.token || '';
+    document.getElementById('api-body').value = p.body || '';
+  }
+
+  async function runApiTest() {
+    const method = document.getElementById('api-method').value;
+    const url = document.getElementById('api-url').value.trim();
+    const tok = document.getElementById('api-token').value.trim();
+    const bodyStr = document.getElementById('api-body').value.trim();
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (tok) headers['Authorization'] = `Bearer ${tok}`;
+
+    const opts = { method, headers };
+    if (bodyStr && method !== 'GET') {
+      try { opts.body = JSON.stringify(JSON.parse(bodyStr)); }
+      catch { opts.body = bodyStr; }
+    }
+
+    const start = Date.now();
+    let status, data, responseHeaders;
+    try {
+      const r = await fetch(url, opts);
+      status = r.status;
+      data = await r.json().catch(() => ({}));
+      responseHeaders = {};
+      r.headers.forEach((v, k) => { responseHeaders[k] = v; });
+    } catch (e) {
+      status = 0; data = { error: e.message };
+    }
+    const elapsed = Date.now() - start;
+
+    const result = document.getElementById('api-result');
+    const pre = document.getElementById('api-result-pre');
+    result.style.display = 'block';
+
+    const statusColor = status >= 200 && status < 300 ? '#22c55e' : status >= 400 ? '#ef4444' : '#f59e0b';
+    pre.innerHTML = `<span style="color:${statusColor};font-weight:700">HTTP ${status}</span>  <span style="color:var(--muted)">${elapsed}ms</span>\n\n${JSON.stringify(data, null, 2)}`;
+  }
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+
+  updateNav();
+  loadEvents();
+</script>
+</body>
+</html>
